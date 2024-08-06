@@ -46,7 +46,7 @@ class Operator(OperatorBase):
             os.mkdir(self.data_path)
 
     def run(self, data, selector='energy_func', device_id=''):
-        self.capacity = self.capacity - ((pd.Timestamp.now()-self.timestamp_control)/pd.Timedelta(hours=1))*self.charging_power
+        self.capacity = self.capacity + ((pd.Timestamp.now()-self.timestamp_control)/pd.Timedelta(hours=1))*self.charging_power
 
         if self.capacity >= self.max_capacity:
             self.capacity = self.max_capacity
