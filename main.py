@@ -55,6 +55,10 @@ class Operator(OperatorBase):
 
         self.timestamp_control = todatetime(data['Time']).tz_localize(None)
         self.charging_power = data['Power']
+        if self.charging_power > = self.max_power:
+           self.charging_power = self.max_power
+        elif self.charging_power < 0:
+           self.charging_power = 0
         
         logger.debug('Charging Power: '+str(data['Power'])+'  '+'time: '+str(self.timestamp_control))
 
