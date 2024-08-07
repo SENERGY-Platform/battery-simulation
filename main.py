@@ -26,7 +26,8 @@ from operator_lib.util import Config
 class CustomConfig(Config):
     data_path = "/opt/data"
     capacity : float = 500
-    max_power : float = 1000 
+    max_charging_power : float = 1000
+    max_discharging_power : float = 1000
 
     def __init__(self, d, **kwargs):
         super().__init__(d, **kwargs)
@@ -40,13 +41,14 @@ class Operator(OperatorBase):
 
         self.capacity = self.config.capacity
         self.max_capacity = self.self.config.max_capacity
-        self.max_power = self.config.max_power
+        self.max_charging_power = self.config.max_charging_power
+        self.max_discharging_power = self.config.max_discharging_power
 
         if not os.path.exists(self.data_path):
             os.mkdir(self.data_path)
 
     def run(self, data, selector='energy_func', device_id=''):
-        self.capacity = self.capacity - ((pd.Timestamp.now()-self.timestamp_control)/pd.Timedelta(hours=1))*self.charging_power
+        self.capacity = self.capacity + ((pd.Timestamp.now()-self.timestamp_control)/pd.Timedelta(hours=1))*self.battery_power
 
         if self.capacity >= self.max_capacity:
             self.capacity = self.max_capacity
@@ -54,9 +56,14 @@ class Operator(OperatorBase):
             self.capacity = 0
 
         self.timestamp_control = todatetime(data['Time']).tz_localize(None)
-        self.charging_power = data['Power']
+        self.battery_power = data['Power']
+
+        if self.battery_power > self.max_charging_power:
+            self.battery_power = self.max_charging_power
+        elif self.battery_power < -self.max_discharging_power:
+            self.battery_power = -self.max_discharging_power
         
-        logger.debug('Charging Power: '+str(data['Power'])+'  '+'time: '+str(self.timestamp_control))
+        logger.debug('Battery Power: '+str(self.battery_power)+'  '+'time: '+str(self.timestamp_control))
 
         sleep(60)
 
