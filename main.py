@@ -22,6 +22,8 @@ import pandas as pd
 import os
 from time import sleep
 
+BATTERY_CONTROL_LIST_FILENAME = "battery_control_list.pickle"
+
 from operator_lib.util import Config
 class CustomConfig(Config):
     data_path = "/opt/data"
@@ -48,7 +50,7 @@ class Operator(OperatorBase):
         self.battery_power = 0
         self.timestamp_control = pd.Timestamp.now()
 
-        self.battery_control_list = [{"time": self.timestamp_control, "battery_power": 0, "capacity": self.capacity}]
+        self.battery_control_list = load(self.config.data_path, BATTERY_CONTROL_LIST_FILENAME, [{"time": self.timestamp_control, "battery_power": 0, "capacity": self.capacity}])
         # time is the current time, battery_time is the constant charging/discharging battery power since the last entry in the list,
         # capacity is the current battery capacity 
 
@@ -74,6 +76,8 @@ class Operator(OperatorBase):
             self.capacity = 0
         else:
            self.battery_control_list.append({"time": self.timestamp_control, "battery_power": self.battery_power, "capacity": self.capacity}) 
+        
+        save(self.data_path, BATTERY_CONTROL_LIST_FILENAME, self.power_data)
 
         logger.debug(f"BATTERY:        Next output: capacity is {self.capacity}       timestamp is {self.timestamp_control}")
 
