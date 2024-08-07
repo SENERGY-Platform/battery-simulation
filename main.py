@@ -77,7 +77,7 @@ class Operator(OperatorBase):
         else:
            self.battery_control_list.append({"time": self.timestamp_control, "battery_power": self.battery_power, "capacity": self.capacity}) 
         
-        save(self.data_path, BATTERY_CONTROL_LIST_FILENAME, self.power_data)
+        save(self.data_path, BATTERY_CONTROL_LIST_FILENAME, self.battery_control_list)
 
         logger.debug(f"BATTERY:        Next output: capacity is {self.capacity}       timestamp is {self.timestamp_control}")
 
