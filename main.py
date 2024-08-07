@@ -40,7 +40,7 @@ class Operator(OperatorBase):
         self.data_path = self.config.data_path
 
         self.capacity = self.config.capacity
-        self.max_capacity = self.self.config.max_capacity
+        self.max_capacity = self.config.max_capacity
         self.max_charging_power = self.config.max_charging_power
         self.max_discharging_power = self.config.max_discharging_power
 
