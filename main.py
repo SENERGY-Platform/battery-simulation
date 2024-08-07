@@ -60,7 +60,7 @@ class Operator(OperatorBase):
         self.capacity = self.capacity + ((todatetime(data['Time']).tz_localize(None)-self.timestamp_control)/pd.Timedelta(hours=1))*self.battery_power
         self.timestamp_control = todatetime(data['Time']).tz_localize(None)
 
-        if self.capacity >= self.max_capacity:
+        if self.capacity > self.max_capacity:
             hours_in_max_cap = (self.capacity - self.max_capacity)/self.battery_power
             time_when_max_cap_reached = self.timestamp_control - pd.Timedelta(hours=hours_in_max_cap)
             self.battery_control_list.append({"time": time_when_max_cap_reached, "battery_power": self.battery_power, "capacity": self.max_capacity})
