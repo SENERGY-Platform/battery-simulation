@@ -40,10 +40,10 @@ class Operator(OperatorBase):
         super().init(*args, **kwargs)
         self.data_path = self.config.data_path
 
-        self.capacity = self.config.capacity
-        self.max_capacity = self.config.max_capacity
-        self.max_charging_power = self.config.max_charging_power
-        self.max_discharging_power = self.config.max_discharging_power
+        self.capacity = float(self.config.capacity)
+        self.max_capacity = float(self.config.max_capacity)
+        self.max_charging_power = float(self.config.max_charging_power)
+        self.max_discharging_power = float(self.config.max_discharging_power)
 
         self.battery_power = 0
         self.timestamp_control = pd.Timestamp.now()
