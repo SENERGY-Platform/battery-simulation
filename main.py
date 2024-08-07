@@ -26,6 +26,7 @@ from operator_lib.util import Config
 class CustomConfig(Config):
     data_path = "/opt/data"
     capacity : float = 500
+    max_capacity : float = 500
     max_charging_power : float = 1000
     max_discharging_power : float = 1000
 
