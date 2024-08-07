@@ -45,7 +45,10 @@ class Operator(OperatorBase):
         self.max_charging_power = self.config.max_charging_power
         self.max_discharging_power = self.config.max_discharging_power
 
-        self.battery_control_list = [{"time": pd.Timestamp.now(), "battery_power": 0, "capacity": self.capacity}]
+        self.battery_power = 0
+        self.timestamp_control = pd.Timestamp.now()
+
+        self.battery_control_list = [{"time": self.timestamp_control, "battery_power": 0, "capacity": self.capacity}]
         # time is the current time, battery_time is the constant charging/discharging battery power since the last entry in the list,
         # capacity is the current battery capacity 
 
