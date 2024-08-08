@@ -98,10 +98,10 @@ class Operator(OperatorBase):
 
         
 
-        return {
+            return {
                     "Capacity": self.capacity,
                     "Time": timestamp_to_str(self.timestamp_control)
-        }
+            }
 
 from operator_lib.operator_lib import OperatorLib
 if __name__ == "__main__":
