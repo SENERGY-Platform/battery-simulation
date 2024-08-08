@@ -89,6 +89,12 @@ class Operator(OperatorBase):
             elif self.battery_power < -self.max_discharging_power:
                 self.battery_power = -self.max_discharging_power
 
+            if self.capacity > self.max_capacity - 10 and self.battery_power > 0:
+                self.battery_power = 0
+            if self.capacity < 10 and self.battery_power < 0:
+                self.battery_power = 0
+
+
             logger.debug('BATTERY:        Actual new Battery Power: '+str(self.battery_power)+'  '+'time: '+str(self.timestamp_control))
 
         # The battery_power is only intersting internally inside the battery and will be used to compute the capacity at the next timestamp.
