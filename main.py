@@ -21,6 +21,8 @@ from operator_lib.util.persistence import save, load
 import pandas as pd
 import os
 from time import sleep
+import typing
+import datetime
 
 BATTERY_CONTROL_LIST_FILENAME = "battery_control_list.pickle"
 
@@ -57,10 +59,15 @@ class Operator(OperatorBase):
         if not os.path.exists(self.data_path):
             os.mkdir(self.data_path)
 
-    def run(self, data, selector='energy_func', device_id=''):
+    def run(self, data: typing.Dict[str, typing.Any], selector: str, device_id, timestamp: datetime.datetime):
+        # Convert to german time and then forget the timezone.
+        timestamp = pd.Timestamp(timestamp).tz_localize("Zulu").tz_convert("Europe/Berlin").tz_localize(None)
+        
+        data = {"trigger_battery": data["trigger_battery"], "Power": data['Power'], "Time": timestamp}
+        
         if data["trigger_battery"] == "yes":
-            self.capacity = self.capacity + ((todatetime(data['Time']).tz_localize(None)-self.timestamp_control)/pd.Timedelta(hours=1))*self.battery_power
-            self.timestamp_control = todatetime(data['Time']).tz_localize(None)
+            self.capacity = self.capacity + ((data['Time']-self.timestamp_control)/pd.Timedelta(hours=1))*self.battery_power
+            self.timestamp_control = data['Time']
 
             if self.capacity > self.max_capacity:
                 hours_in_max_cap = (self.capacity - self.max_capacity)/self.battery_power
