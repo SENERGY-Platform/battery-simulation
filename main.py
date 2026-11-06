@@ -16,15 +16,14 @@
 
 __all__ = ("Operator", )
 
-from operator_lib.util import OperatorBase, logger, InitPhase, todatetime, timestamp_to_str
+from operator_lib.util import OperatorBase, logger, timestamp_to_str
 from operator_lib.util.persistence import save, load
 import pandas as pd
 import os
-from time import sleep
 import typing
 import datetime
 
-BATTERY_CONTROL_LIST_FILENAME = "battery_control_list.pickle"
+STATE_FILENAME = "battery_state.pickle"
 
 from operator_lib.util import Config, Inputs, Outputs
 class CustomConfig(Config):
@@ -58,80 +57,62 @@ class Operator(OperatorBase):
 
     def init(self, *args, **kwargs):
         super().init(*args, **kwargs)
+        if not os.path.exists(self.data_path):
+            os.mkdir(self.data_path)
 
-        self.capacity = float(self.config.capacity)
         self.max_capacity = float(self.config.max_capacity)
         self.max_charging_power = float(self.config.max_charging_power)
         self.max_discharging_power = float(self.config.max_discharging_power)
 
-        self.battery_power = 0
-        self.timestamp_control = pd.Timestamp.now()
-
-        self.battery_control_list = load(self.data_path, BATTERY_CONTROL_LIST_FILENAME, [{"time": self.timestamp_control, "battery_power": 0, "capacity": self.capacity}])
-        # time is the current time, battery_time is the constant charging/discharging battery power since the last entry in the list,
-        # capacity is the current battery capacity 
-
-        if not os.path.exists(self.data_path):
-            os.mkdir(self.data_path)
+        # The battery after the last control: its capacity, the power it has (dis)charged with since and the time
+        # of that control. Kept on the volume, so that a restart continues with the battery as it was.
+        state = load(self.data_path, STATE_FILENAME)
+        if state:
+            self.capacity = state["capacity"]
+            self.battery_power = state["battery_power"]
+            self.timestamp_control = state["time"]
+        else:
+            self.capacity = float(self.config.capacity)
+            self.battery_power = 0
+            self.timestamp_control = None
 
     def run(self, data: typing.Dict[str, typing.Any], selector: str, device_id, timestamp: datetime.datetime):
+        if data["trigger_battery"] != "yes":
+            return None
         # UTC without a timezone: in German time, a duration across the change of the clocks is an hour off.
         timestamp = pd.Timestamp(timestamp).tz_convert("UTC").tz_localize(None)
-        
-        data = {"trigger_battery": data["trigger_battery"], "Power": data['Power'], "Time": timestamp}
-        
-        if data["trigger_battery"] == "yes":
-            self.capacity = self.capacity + ((data['Time']-self.timestamp_control)/pd.Timedelta(hours=1))*self.battery_power
-            self.timestamp_control = data['Time']
 
-            if self.capacity > self.max_capacity:
-                hours_in_max_cap = (self.capacity - self.max_capacity)/self.battery_power
-                time_when_max_cap_reached = self.timestamp_control - pd.Timedelta(hours=hours_in_max_cap)
-                self.battery_control_list.append({"time": time_when_max_cap_reached, "battery_power": self.battery_power, "capacity": self.max_capacity})
-                self.battery_control_list.append({"time": self.timestamp_control, "battery_power": 0, "capacity": self.max_capacity})
-                self.capacity = self.max_capacity
-            elif self.capacity < 0: # This only happens while discharging-->battery_power < 0
-                hours_in_0_cap = self.capacity - self.max_capacity/self.battery_power # >0
-                time_when_0_cap_reached = self.timestamp_control - pd.Timedelta(hours=hours_in_0_cap)
-                self.battery_control_list.append({"time": time_when_0_cap_reached, "battery_power": self.battery_power, "capacity": 0})
-                self.battery_control_list.append({"time": self.timestamp_control, "battery_power": 0, "capacity": 0})
-                self.capacity = 0
-            else:
-                self.battery_control_list.append({"time": self.timestamp_control, "battery_power": self.battery_power, "capacity": self.capacity}) 
-        
-            save(self.data_path, BATTERY_CONTROL_LIST_FILENAME, self.battery_control_list)
+        if self.timestamp_control is not None:
+            self.capacity = self.capacity + ((timestamp-self.timestamp_control)/pd.Timedelta(hours=1))*self.battery_power
+        self.timestamp_control = timestamp
+        self.capacity = min(max(self.capacity, 0), self.max_capacity)
 
-            logger.debug(f"BATTERY:        Next output: capacity is {self.capacity}       timestamp is {self.timestamp_control}")
+        logger.debug(f"BATTERY:        Next output: capacity is {self.capacity}       timestamp is {self.timestamp_control}")
 
-        
-            self.battery_power = data['Power'] # new battery_power
+        self.battery_power = float(data['Power']) # new battery_power
 
-            if self.battery_power > self.max_charging_power:
-                self.battery_power = self.max_charging_power
-            elif self.battery_power < -self.max_discharging_power:
-                self.battery_power = -self.max_discharging_power
+        if self.battery_power > self.max_charging_power:
+            self.battery_power = self.max_charging_power
+        elif self.battery_power < -self.max_discharging_power:
+            self.battery_power = -self.max_discharging_power
 
-            if self.capacity > self.max_capacity - 10 and self.battery_power > 0:
-                self.battery_power = 0
-            if self.capacity < 10 and self.battery_power < 0:
-                self.battery_power = 0
+        if self.capacity > self.max_capacity - 10 and self.battery_power > 0:
+            self.battery_power = 0
+        if self.capacity < 10 and self.battery_power < 0:
+            self.battery_power = 0
 
+        logger.debug('BATTERY:        Actual new Battery Power: '+str(self.battery_power)+'  '+'time: '+str(self.timestamp_control))
 
-            logger.debug('BATTERY:        Actual new Battery Power: '+str(self.battery_power)+'  '+'time: '+str(self.timestamp_control))
+        save(self.data_path, STATE_FILENAME, {"capacity": self.capacity, "battery_power": self.battery_power,
+                                              "time": self.timestamp_control})
 
         # The battery_power is only intersting internally inside the battery and will be used to compute the capacity at the next timestamp.
         # The current capacity must be returned to the peak shaving operator.
-        
-        
-
-        
-
-            return {
-                    "Capacity": self.capacity,
-                    "Time": timestamp_to_str(self.timestamp_control)
-            }
+        return {
+                "Capacity": self.capacity,
+                "Time": timestamp_to_str(self.timestamp_control)
+        }
 
 from operator_lib.operator_lib import OperatorLib
 if __name__ == "__main__":
     OperatorLib(Operator(), name="battery-simulation-operator", git_info_file='git_commit')
-

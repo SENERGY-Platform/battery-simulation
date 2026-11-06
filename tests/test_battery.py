@@ -104,6 +104,13 @@ class TestBattery(unittest.TestCase):
         self.control(operator, at(0, 30, day=25, month=10), 200)
         self.assertEqual(700, self.control(operator, at(1, 30, day=25, month=10), 0)["Capacity"])
 
+    def test_continues_with_capacity_and_power_after_a_restart(self):
+        operator = self.start()
+        self.control(operator, at(10), 600)
+        self.control(operator, at(10, 30), 100)
+        restarted = self.start()
+        self.assertEqual(900, self.control(restarted, at(11, 30), 0)["Capacity"])
+
     def test_starts_with_the_configured_capacity_on_a_new_volume(self):
         operator = self.start(capacity=250)
         self.assertEqual(250, self.control(operator, at(10), 0)["Capacity"])
