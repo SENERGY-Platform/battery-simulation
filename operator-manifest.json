@@ -1,0 +1,44 @@
+{
+  "inputs": [
+    {
+      "name": "Power",
+      "type": "float"
+    },
+    {
+      "name": "trigger_battery",
+      "type": "string"
+    }
+  ],
+  "outputs": [
+    {
+      "name": "Capacity",
+      "type": "float"
+    },
+    {
+      "name": "Time",
+      "type": "string"
+    }
+  ],
+  "config_values": [
+    {
+      "name": "capacity",
+      "type": "float"
+    },
+    {
+      "name": "max_capacity",
+      "type": "float"
+    },
+    {
+      "name": "max_charging_power",
+      "type": "float"
+    },
+    {
+      "name": "max_discharging_power",
+      "type": "float"
+    },
+    {
+      "name": "logger_level",
+      "type": "string"
+    }
+  ]
+}

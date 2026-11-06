@@ -26,23 +26,38 @@ import datetime
 
 BATTERY_CONTROL_LIST_FILENAME = "battery_control_list.pickle"
 
-from operator_lib.util import Config
+from operator_lib.util import Config, Inputs, Outputs
 class CustomConfig(Config):
-    data_path = "/opt/data"
-    capacity : float = 500
-    max_capacity : float = 500
-    max_charging_power : float = 1000
-    max_discharging_power : float = 1000
+    # Wh
+    capacity: float = 500
+    max_capacity: float = 500
+    # W
+    max_charging_power: float = 1000
+    max_discharging_power: float = 1000
+    # A field of the library, declared again so that flows can set it.
+    logger_level: str = "warning"
 
     def __init__(self, d, **kwargs):
         super().__init__(d, **kwargs)
 
+# The output of the peak shaving operator. The time of a control is the time the platform received it.
+class BatteryInputs(Inputs):
+    Power: float
+    trigger_battery: str
+
+class BatteryOutputs(Outputs):
+    Capacity: float
+    Time: str
+
 class Operator(OperatorBase):
     configType = CustomConfig
+    inputs = BatteryInputs
+    outputs = BatteryOutputs
+    # Where the state is kept, the volume of the deployment; not a config value, which a flow could change.
+    data_path = "/opt/data"
 
     def init(self, *args, **kwargs):
         super().init(*args, **kwargs)
-        self.data_path = self.config.data_path
 
         self.capacity = float(self.config.capacity)
         self.max_capacity = float(self.config.max_capacity)
@@ -52,7 +67,7 @@ class Operator(OperatorBase):
         self.battery_power = 0
         self.timestamp_control = pd.Timestamp.now()
 
-        self.battery_control_list = load(self.config.data_path, BATTERY_CONTROL_LIST_FILENAME, [{"time": self.timestamp_control, "battery_power": 0, "capacity": self.capacity}])
+        self.battery_control_list = load(self.data_path, BATTERY_CONTROL_LIST_FILENAME, [{"time": self.timestamp_control, "battery_power": 0, "capacity": self.capacity}])
         # time is the current time, battery_time is the constant charging/discharging battery power since the last entry in the list,
         # capacity is the current battery capacity 
 
@@ -118,5 +133,5 @@ class Operator(OperatorBase):
 
 from operator_lib.operator_lib import OperatorLib
 if __name__ == "__main__":
-    OperatorLib(Operator(), name="leakage-detection-operator", git_info_file='git_commit')
+    OperatorLib(Operator(), name="battery-simulation-operator", git_info_file='git_commit')
 
